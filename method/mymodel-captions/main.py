@@ -75,9 +75,10 @@ def add_log(ss):
     return
 
 
-def add_output(ss):
+def add_output(gold_text, epsilon, modify_text):
     with open(args.output_file, 'a') as f:
-        f.write(str(ss) + '\n')
+        f.write(str(modify_text) + '\n')
+        #f.write(str(gold_text) + ' -- ' + str(modify_text) + ' -- ' + str(epsilon) + '\n')
     return
 
 
@@ -125,6 +126,7 @@ def train_iters(ae_model, dis_model):
     )
     train_data_loader.create_batches(args.train_file_list, args.train_label_list, if_shuffle=True)
     add_log("Start train process.")
+    # train autoencoder and classifier separately
     ae_model.train()
     dis_model.train()
 
@@ -240,9 +242,9 @@ def eval_iters(ae_model, dis_model):
             target = get_cuda(torch.tensor([[0.0]], dtype=torch.float))
         print("target_labels", target)
 
-        modify_text = fgim_attack(dis_model, latent, target, ae_model, args.max_sequence_length, args.id_bos,
+        gold_text, epsilon, modify_text = fgim_attack(dis_model, latent, target, ae_model, args.max_sequence_length, args.id_bos,
                                         id2text_sentence, args.id_to_word, gold_ans[it])
-        add_output(modify_text)
+        add_output(gold_text, epsilon, modify_text)
     return
 
 

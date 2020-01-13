@@ -80,10 +80,10 @@ class PositionalEncoding(nn.Module):
         # Compute the positional encodings once in log space.
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) *
-                             -(math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
+        div_term = torch.exp((torch.arange(0, d_model, 2) *
+                             -(math.log(10000.0) / d_model)).float())
+        pe[:, 0::2] = torch.sin(position.float() * div_term)
+        pe[:, 1::2] = torch.cos(position.float() * div_term)
         pe = pe.unsqueeze(0)
         self.register_buffer('pe', pe)
 
@@ -403,16 +403,16 @@ class Classifier(nn.Module):
         super().__init__()
         self.fc1 = nn.Linear(latent_size, 100)
         self.relu1 = nn.LeakyReLU(0.2, )
-        self.fc2 = nn.Linear(100, 50)
-        self.relu2 = nn.LeakyReLU(0.2)
-        self.fc3 = nn.Linear(50, output_size)
+#        self.fc2 = nn.Linear(100, 50)
+#        self.relu2 = nn.LeakyReLU(0.2)
+        self.fc3 = nn.Linear(100, output_size)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, input):
         out = self.fc1(input)
         out = self.relu1(out)
-        out = self.fc2(out)
-        out = self.relu2(out)
+#        out = self.fc2(out)
+#        out = self.relu2(out)
         out = self.fc3(out)
         out = self.sigmoid(out)
 
@@ -429,6 +429,8 @@ def fgim_attack(model, origin_data, target, ae_model, max_sequence_length, id_bo
     gold_text = id2text_sentence(gold_ans, id_to_word)
     print("gold:", gold_text)
     # while True:
+    best_so_far = 999999
+    pred_text = ''
     for epsilon in [2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]:
         it = 0
         data = origin_data
@@ -466,9 +468,12 @@ def fgim_attack(model, origin_data, target, ae_model, max_sequence_length, id_bo
             generator_text = id2text_sentence(generator_id[0], id_to_word)
             print("| It {:2d} | dis model pred {:5.4f} |".format(it, output[0].item()))
             print(generator_text)
-            if it >= 5:
+            if best_so_far > output[0].item():
+                best_so_far = output[0].item()
+                pred_text = generator_text
+            if it >= 20 or epsilon < 0.001 :
                 break
-    return
+    return gold_text, epsilon, pred_text
 
 
 
